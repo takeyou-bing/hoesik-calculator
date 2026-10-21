@@ -258,14 +258,36 @@ function createAmountInput(value, onChange) {
   return input;
 }
 
-// <label>글자 [입력칸] 뒷글자</label> 모양 만들기
+// 입력 한 줄 만들기: [글자] [입력칸 뒷글자] 모양
+// (class 이름은 style.css에서 디자인할 때 사용)
 function createLabel(text, control, suffix = "") {
   const label = document.createElement("label");
-  label.append(text + " ", control);
+  label.className = "field";
+
+  const labelText = document.createElement("span");
+  labelText.className = "field-label";
+  labelText.textContent = text;
+
+  const box = document.createElement("span");
+  box.className = "field-box";
+  box.append(control);
   if (suffix) {
-    label.append(" " + suffix);
+    const unit = document.createElement("span");
+    unit.className = "unit";
+    unit.textContent = suffix;
+    box.append(unit);
   }
+
+  label.append(labelText, box);
   return label;
+}
+
+// 작은 소제목 만들기 (예: "참석", "정산 방식")
+function createSubTitle(text) {
+  const p = document.createElement("p");
+  p.className = "sub-title";
+  p.textContent = text;
+  return p;
 }
 
 
@@ -286,11 +308,14 @@ function renderPeople() {
 
   for (const name of people) {
     const li = document.createElement("li");
-    li.textContent = name + " ";
+    li.className = "person-chip";
+    li.textContent = name;
 
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
+    removeBtn.className = "chip-remove";
     removeBtn.textContent = "×";
+    removeBtn.setAttribute("aria-label", `${name} 삭제`);
     removeBtn.addEventListener("click", () => removePerson(name));
 
     li.appendChild(removeBtn);
@@ -318,7 +343,11 @@ function renderResult() {
   resultList.innerHTML = "";
   for (const name of people) {
     const li = document.createElement("li");
-    li.textContent = `${name} ${result.amounts[name].toLocaleString("ko-KR")}원`;
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = name;
+    const amountSpan = document.createElement("strong");
+    amountSpan.textContent = `${result.amounts[name].toLocaleString("ko-KR")}원`;
+    li.append(nameSpan, amountSpan);
     resultList.appendChild(li);
   }
 
@@ -349,16 +378,20 @@ function createRoundCard(round, index) {
   card.className = "round";
 
   // 제목 (1차, 2차, 3차) + 삭제 버튼 (차수가 2개 이상일 때만)
+  const header = document.createElement("div");
+  header.className = "round-header";
   const title = document.createElement("h3");
-  title.textContent = `${index + 1}차 `;
+  title.textContent = `${index + 1}차`;
+  header.appendChild(title);
   if (rounds.length > 1) {
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
+    removeBtn.className = "text-btn";
     removeBtn.textContent = "삭제";
     removeBtn.addEventListener("click", () => removeRound(index));
-    title.appendChild(removeBtn);
+    header.appendChild(removeBtn);
   }
-  card.appendChild(title);
+  card.appendChild(header);
 
   // 총 금액
   const amountInput = createAmountInput(round.amount, (number) => {
@@ -368,15 +401,16 @@ function createRoundCard(round, index) {
   card.appendChild(createLabel("총 금액", amountInput, "원"));
 
   // 참석자 체크
-  const attendeeTitle = document.createElement("p");
-  attendeeTitle.textContent = "참석";
-  card.appendChild(attendeeTitle);
+  card.appendChild(createSubTitle("참석"));
 
   if (people.length === 0) {
     const empty = document.createElement("p");
+    empty.className = "hint";
     empty.textContent = "먼저 위에서 참석자를 추가해 주세요.";
     card.appendChild(empty);
   }
+  const chips = document.createElement("div");
+  chips.className = "chips";
   for (const name of people) {
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -385,18 +419,21 @@ function createRoundCard(round, index) {
       toggleAttendee(round, name, checkbox.checked);
     });
     const label = document.createElement("label");
-    label.append(checkbox, " " + name);
-    card.appendChild(label);
+    // 체크된 사람은 'checked' 이름표를 붙여서 색으로 구분
+    label.className = checkbox.checked ? "chip checked" : "chip";
+    label.append(checkbox, name);
+    chips.appendChild(label);
   }
+  card.appendChild(chips);
 
   // 정산 방식
-  const methodTitle = document.createElement("p");
-  methodTitle.textContent = "정산 방식";
-  card.appendChild(methodTitle);
+  card.appendChild(createSubTitle("정산 방식"));
+  const segmented = document.createElement("div");
+  segmented.className = "segmented";
 
   const methods = [
     { value: "equal", text: "1/N" },
-    { value: "sponsor", text: "특정인 부담 후 나머지 1/N" },
+    { value: "sponsor", text: "특정인 부담 + 1/N" },
   ];
   for (const method of methods) {
     const radio = document.createElement("input");
@@ -405,9 +442,11 @@ function createRoundCard(round, index) {
     radio.checked = round.method === method.value;
     radio.addEventListener("change", () => changeMethod(round, method.value));
     const label = document.createElement("label");
-    label.append(radio, " " + method.text);
-    card.appendChild(label);
+    label.className = radio.checked ? "segment selected" : "segment";
+    label.append(radio, method.text);
+    segmented.appendChild(label);
   }
+  card.appendChild(segmented);
 
   // '특정인 부담'일 때만 부담자, 부담액 입력칸 표시
   if (round.method === "sponsor") {
