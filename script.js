@@ -104,6 +104,10 @@ function addRound() {
 
 // 차수 삭제 (뒤 차수는 번호가 하나씩 당겨짐)
 function removeRound(index) {
+  // 금액을 이미 넣은 차수는 실수로 지우지 않도록 한 번 더 물어봄
+  if (rounds[index].amount > 0 && !confirm(`${index + 1}차를 삭제할까요?`)) {
+    return;
+  }
   rounds.splice(index, 1);
   render();
 }
@@ -253,8 +257,10 @@ function calculate() {
 // ==============================
 
 // "320,000" 같은 글자 → 320000 숫자 (숫자 외의 글자는 무시)
+// 최대 9자리(999,999,999원)까지만 받음: 너무 큰 숫자는 컴퓨터가 정확히 계산하지 못함
 function parseAmount(text) {
-  return Number(text.replace(/[^0-9]/g, "")) || 0;
+  const digits = text.replace(/[^0-9]/g, "").slice(0, 9);
+  return Number(digits) || 0;
 }
 
 // 320000 숫자 → "320,000" 글자 (0이면 빈칸)

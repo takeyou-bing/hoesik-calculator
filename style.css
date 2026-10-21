@@ -243,6 +243,7 @@ select:focus {
   background: var(--accent-soft);
   color: var(--accent-text);
   font-weight: 600;
+  overflow-wrap: anywhere; /* 혹시 긴 글자가 들어와도 화면 밖으로 넘치지 않게 */
 }
 .chip-remove {
   font: inherit;

@@ -23,7 +23,8 @@
     <section class="card" id="people-section">
       <h2>① 참석자</h2>
       <div class="input-row">
-        <input id="name-input" type="text" placeholder="이름 입력 후 추가">
+        <!-- maxlength: 이름은 최대 10글자 (긴 이름이 휴대폰 화면을 넘치지 않게) -->
+        <input id="name-input" type="text" placeholder="이름 입력 후 추가" maxlength="10">
         <button id="add-person-btn" class="btn" type="button">추가</button>
       </div>
       <!-- 추가된 이름이 여기에 표시됨 (script.js가 채움) -->
