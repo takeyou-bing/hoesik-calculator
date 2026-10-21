@@ -10,9 +10,13 @@
 </head>
 <body>
   <main class="container">
+    <!-- 맨 위 주황 배너 -->
     <header class="app-header">
-      <h1>🍻 회식 정산기</h1>
-      <p>차수마다 참석자가 달라도 한 번에 정산해요</p>
+      <div class="app-icon">🍻</div>
+      <div>
+        <h1>회식 정산기</h1>
+        <p>1차, 2차, 3차 참석자가 달라도 한 번에 정산해요</p>
+      </div>
     </header>
 
     <!-- ① 참석자 입력 -->
@@ -37,8 +41,12 @@
     </section>
 
     <!-- ③ 정산 결과 -->
+    <!-- 영수증 모양 -->
     <section class="card result-card" id="result-section">
-      <h2>③ 정산 결과</h2>
+      <div class="receipt-header">
+        <h2>③ 정산 결과</h2>
+        <span id="receipt-date"></span>
+      </div>
       <!-- 사람별 금액이 여기에 표시됨 (script.js가 채움) -->
       <ul id="result-list"></ul>
       <!-- 총액, 그리고 100원 올림으로 더 걷힌 금액 안내 -->
@@ -49,6 +57,9 @@
       <button id="copy-btn" class="btn btn-primary" type="button">📋 단톡방용 복사</button>
     </section>
   </main>
+
+  <!-- 복사했을 때 화면 아래에 잠깐 뜨는 알림 -->
+  <div id="toast" role="status"></div>
 
   <!-- 동작을 담당하는 JavaScript 파일 연결 (화면을 다 그린 뒤 실행되도록 맨 아래에 둠) -->
   <script src="script.js"></script>

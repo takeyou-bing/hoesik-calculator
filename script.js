@@ -18,6 +18,10 @@ let people = [];
 // }
 let rounds = [createRound()];
 
+// 움직임 효과용 기억
+let newRoundIndex = -1;    // 방금 추가된 차수 번호 (그 카드만 나타나는 효과)
+let previousAmounts = {};  // 직전 결과 금액 (바뀐 금액만 반짝이는 효과)
+
 
 // ==============================
 // 2. 화면 요소 찾기 (index.html의 id로 찾음)
@@ -33,6 +37,8 @@ const totalMessage = document.getElementById("total-message");
 const extraMessage = document.getElementById("extra-message");
 const warningList = document.getElementById("warning-list");
 const copyBtn = document.getElementById("copy-btn");
+const toast = document.getElementById("toast");
+const receiptDate = document.getElementById("receipt-date");
 
 
 // ==============================
@@ -91,7 +97,9 @@ function addRound() {
     return;
   }
   rounds.push(createRound());
+  newRoundIndex = rounds.length - 1;
   render();
+  newRoundIndex = -1;
 }
 
 // 차수 삭제 (뒤 차수는 번호가 하나씩 당겨짐)
@@ -146,7 +154,9 @@ function roundUpTo100(number) {
 //   spent: 410000,                        실제로 쓴 총액
 //   collected: 410200,                    걷는 총액 (올림 후 합계)
 //   warnings: ["2차에 참석자가 없어요"],   계산에서 빠진 차수 안내
-//   summaries: ["1차 320,000원 (4명)"]    계산에 들어간 차수 요약 (복사용)
+//   summaries: ["1차 320,000원 (4명)"],   계산에 들어간 차수 요약 (복사용)
+//   breakdown: { "김팀장": [{ round: 0, amount: 100000, sponsor: true }, ...] }
+//                                         사람별 차수 내역 (결과 카드에 작게 표시)
 // }
 function calculate() {
   // 사람별 정확한 금액 (소수 포함), 처음엔 모두 0원
@@ -158,6 +168,20 @@ function calculate() {
   let spent = 0;
   const warnings = [];
   const summaries = [];
+
+  // 사람별 차수 내역, 처음엔 모두 빈 목록
+  const breakdown = {};
+  for (const name of people) {
+    breakdown[name] = [];
+  }
+
+  // name이 index번째 차수에서 amount원을 내도록 더함
+  function addShare(name, index, amount, isSponsor = false) {
+    exact[name] += amount;
+    if (amount > 0) {
+      breakdown[name].push({ round: index, amount, sponsor: isSponsor });
+    }
+  }
 
   rounds.forEach((round, index) => {
     const roundName = `${index + 1}차`;
@@ -191,15 +215,15 @@ function calculate() {
         return;
       }
 
-      exact[round.sponsor] += round.sponsorAmount;
+      addShare(round.sponsor, index, round.sponsorAmount, true);
       for (const name of others) {
-        exact[name] += rest / others.length;
+        addShare(name, index, rest / others.length);
       }
     } else {
       // 1/N: 총 금액을 참석 인원으로 나눠 각자에게 더함
       const share = round.amount / round.attendees.length;
       for (const name of round.attendees) {
-        exact[name] += share;
+        addShare(name, index, share);
       }
     }
     spent += round.amount;
@@ -220,7 +244,7 @@ function calculate() {
     collected += amounts[name];
   }
 
-  return { amounts, spent, collected, warnings, summaries };
+  return { amounts, spent, collected, warnings, summaries, breakdown };
 }
 
 
@@ -343,13 +367,40 @@ function renderResult() {
   resultList.innerHTML = "";
   for (const name of people) {
     const li = document.createElement("li");
+
+    // 윗줄: 이름 ........ 금액
+    const row = document.createElement("div");
+    row.className = "result-row";
     const nameSpan = document.createElement("span");
     nameSpan.textContent = name;
     const amountSpan = document.createElement("strong");
     amountSpan.textContent = `${result.amounts[name].toLocaleString("ko-KR")}원`;
-    li.append(nameSpan, amountSpan);
+    // 금액이 직전과 달라졌으면 반짝이는 효과
+    if (name in previousAmounts && previousAmounts[name] !== result.amounts[name]) {
+      amountSpan.className = "flash";
+    }
+    row.append(nameSpan, amountSpan);
+    li.appendChild(row);
+
+    // 아랫줄: 차수별 내역 (예: ● 1차 73,333  ● 2차 30,000)
+    const parts = result.breakdown[name];
+    if (parts.length > 0) {
+      const detail = document.createElement("div");
+      detail.className = "breakdown";
+      for (const part of parts) {
+        const item = document.createElement("span");
+        item.className = `dot round-color-${part.round + 1}`;
+        item.textContent =
+          `${part.round + 1}차 ${Math.round(part.amount).toLocaleString("ko-KR")}` +
+          (part.sponsor ? " (부담)" : "");
+        detail.appendChild(item);
+      }
+      li.appendChild(detail);
+    }
+
     resultList.appendChild(li);
   }
+  previousAmounts = { ...result.amounts };
 
   // 총액
   totalMessage.textContent =
@@ -375,13 +426,20 @@ function renderResult() {
 // 차수 카드 하나 만들기
 function createRoundCard(round, index) {
   const card = document.createElement("div");
-  card.className = "round";
+  // round-color-1/2/3: 차수마다 다른 색 (style.css에서 정함)
+  card.className = `round round-color-${index + 1}`;
+  if (index === newRoundIndex) {
+    card.classList.add("appear"); // 방금 추가된 카드만 나타나는 효과
+  }
 
   // 제목 (1차, 2차, 3차) + 삭제 버튼 (차수가 2개 이상일 때만)
   const header = document.createElement("div");
   header.className = "round-header";
   const title = document.createElement("h3");
-  title.textContent = `${index + 1}차`;
+  const badge = document.createElement("span");
+  badge.className = "round-badge";
+  badge.textContent = index + 1;
+  title.append(badge, "차");
   header.appendChild(title);
   if (rounds.length > 1) {
     const removeBtn = document.createElement("button");
@@ -543,11 +601,16 @@ async function copyResult() {
 
   await copyToClipboard(buildCopyText(result));
 
-  // 버튼 글자를 잠깐 바꿔서 복사됐다고 알려줌
-  copyBtn.textContent = "✅ 복사됐어요! 단톡방에 붙여넣으세요";
-  setTimeout(() => {
-    copyBtn.textContent = "📋 단톡방용 복사";
-  }, 2000);
+  showToast("✅ 복사됐어요! 단톡방에 붙여넣으세요");
+}
+
+// 화면 아래에 알림을 잠깐 띄움
+let toastTimer;
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 2000);
 }
 
 
@@ -576,4 +639,8 @@ copyBtn.addEventListener("click", copyResult);
 // ==============================
 // 9. 처음 화면 그리기
 // ==============================
+
+// 영수증에 오늘 날짜 표시 (예: 2026. 10. 21.)
+receiptDate.textContent = new Date().toLocaleDateString("ko-KR");
+
 render();
