@@ -167,14 +167,37 @@ function calculate() {
       return;
     }
     if (round.method === "sponsor") {
-      warnings.push(`${roundName}의 '특정인 부담' 계산은 다음 단계에서 추가돼요.`);
-      return;
-    }
+      // 특정인 부담: 부담자가 부담액을 내고, 남은 금액을 부담자를 뺀 참석자끼리 1/N
+      const others = round.attendees.filter((p) => p !== round.sponsor);
+      const rest = round.amount - round.sponsorAmount;
 
-    // 1/N: 총 금액을 참석 인원으로 나눠 각자에게 더함
-    const share = round.amount / round.attendees.length;
-    for (const name of round.attendees) {
-      exact[name] += share;
+      if (round.sponsor === "") {
+        warnings.push(`${roundName}의 부담자를 선택해 주세요.`);
+        return;
+      }
+      if (round.sponsorAmount === 0) {
+        warnings.push(`${roundName}의 부담액을 입력해 주세요.`);
+        return;
+      }
+      if (rest < 0) {
+        warnings.push(`${roundName}의 부담액이 총 금액보다 많아요.`);
+        return;
+      }
+      if (rest > 0 && others.length === 0) {
+        warnings.push(`${roundName}에 남은 금액을 나눌 다른 참석자가 없어요.`);
+        return;
+      }
+
+      exact[round.sponsor] += round.sponsorAmount;
+      for (const name of others) {
+        exact[name] += rest / others.length;
+      }
+    } else {
+      // 1/N: 총 금액을 참석 인원으로 나눠 각자에게 더함
+      const share = round.amount / round.attendees.length;
+      for (const name of round.attendees) {
+        exact[name] += share;
+      }
     }
     spent += round.amount;
   });
