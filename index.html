@@ -2,11 +2,76 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <!-- 휴대폰에서 화면이 작게 축소되지 않도록 화면 폭에 맞춤 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>회식 정산기</title>
 </head>
 <body>
   <h1>🍻 회식 정산기</h1>
-  <p>Hello! 배포 테스트 중입니다.</p>
+
+  <!-- ① 참석자 입력 -->
+  <section id="people-section">
+    <h2>① 참석자</h2>
+    <input id="name-input" type="text" placeholder="이름 입력">
+    <button id="add-person-btn" type="button">추가</button>
+    <!-- 추가된 이름이 여기에 표시됨 (2단계에서 동작) -->
+    <ul id="people-list">
+      <li>김팀장 <button type="button">×</button></li>
+      <li>이대리 <button type="button">×</button></li>
+    </ul>
+  </section>
+
+  <!-- ② 차수 입력 (3단계부터 차수 카드를 자동으로 만들고, 지금은 1차 모양만 보여줌) -->
+  <section id="rounds-section">
+    <h2>② 차수</h2>
+
+    <div class="round">
+      <h3>1차</h3>
+
+      <label>
+        총 금액
+        <!-- inputmode="numeric": 휴대폰에서 숫자 키패드가 뜨게 함 -->
+        <input type="text" inputmode="numeric" placeholder="0"> 원
+      </label>
+
+      <p>참석</p>
+      <label><input type="checkbox" checked> 김팀장</label>
+      <label><input type="checkbox" checked> 이대리</label>
+
+      <p>정산 방식</p>
+      <label><input type="radio" name="method-1" checked> 1/N</label>
+      <label><input type="radio" name="method-1"> 특정인 부담 후 나머지 1/N</label>
+
+      <!-- '특정인 부담'을 골랐을 때만 보일 영역 -->
+      <div class="sponsor">
+        <label>
+          부담자
+          <select>
+            <option>김팀장</option>
+            <option>이대리</option>
+          </select>
+        </label>
+        <label>
+          부담액
+          <input type="text" inputmode="numeric" placeholder="0"> 원
+        </label>
+      </div>
+    </div>
+
+    <button id="add-round-btn" type="button">+ 차수 추가</button>
+  </section>
+
+  <!-- ③ 정산 결과 -->
+  <section id="result-section">
+    <h2>③ 정산 결과</h2>
+    <!-- 사람별 금액이 여기에 표시됨 (4단계에서 동작) -->
+    <ul id="result-list">
+      <li>김팀장 0원</li>
+      <li>이대리 0원</li>
+    </ul>
+    <!-- 100원 올림으로 더 걷힌 금액 안내 -->
+    <p id="extra-message"></p>
+    <button id="copy-btn" type="button">📋 단톡방용 복사</button>
+  </section>
 </body>
 </html>
