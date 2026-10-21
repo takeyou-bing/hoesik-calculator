@@ -32,6 +32,7 @@ const resultList = document.getElementById("result-list");
 const totalMessage = document.getElementById("total-message");
 const extraMessage = document.getElementById("extra-message");
 const warningList = document.getElementById("warning-list");
+const copyBtn = document.getElementById("copy-btn");
 
 
 // ==============================
@@ -144,7 +145,8 @@ function roundUpTo100(number) {
 //   amounts: { "김팀장": 130000, ... },  사람별 낼 금액 (100원 올림 후)
 //   spent: 410000,                        실제로 쓴 총액
 //   collected: 410200,                    걷는 총액 (올림 후 합계)
-//   warnings: ["2차에 참석자가 없어요"]    계산에서 빠진 차수 안내
+//   warnings: ["2차에 참석자가 없어요"],   계산에서 빠진 차수 안내
+//   summaries: ["1차 320,000원 (4명)"]    계산에 들어간 차수 요약 (복사용)
 // }
 function calculate() {
   // 사람별 정확한 금액 (소수 포함), 처음엔 모두 0원
@@ -155,6 +157,7 @@ function calculate() {
 
   let spent = 0;
   const warnings = [];
+  const summaries = [];
 
   rounds.forEach((round, index) => {
     const roundName = `${index + 1}차`;
@@ -200,6 +203,13 @@ function calculate() {
       }
     }
     spent += round.amount;
+
+    // 복사용 차수 요약 (예: "1차 320,000원 (4명, 김팀장 100,000원 부담)")
+    let detail = `${round.attendees.length}명`;
+    if (round.method === "sponsor") {
+      detail += `, ${round.sponsor} ${round.sponsorAmount.toLocaleString("ko-KR")}원 부담`;
+    }
+    summaries.push(`${roundName} ${round.amount.toLocaleString("ko-KR")}원 (${detail})`);
   });
 
   // 사람별 최종 금액을 100원 단위로 올림
@@ -210,7 +220,7 @@ function calculate() {
     collected += amounts[name];
   }
 
-  return { amounts, spent, collected, warnings };
+  return { amounts, spent, collected, warnings, summaries };
 }
 
 
@@ -438,7 +448,72 @@ function createRoundCard(round, index) {
 
 
 // ==============================
-// 7. 이벤트 연결: 사용자가 무언가 하면 함수 실행
+// 7. 복사: 결과를 단톡방에 붙여넣을 글로 만들어 복사
+// ==============================
+
+// 단톡방용 글 만들기
+function buildCopyText(result) {
+  const lines = [];
+  lines.push("[회식 정산]");
+  lines.push(...result.summaries);
+  lines.push("──────────");
+  for (const name of people) {
+    lines.push(`${name} ${result.amounts[name].toLocaleString("ko-KR")}원`);
+  }
+  lines.push("──────────");
+  lines.push(`총 ${result.spent.toLocaleString("ko-KR")}원`);
+
+  const extra = result.collected - result.spent;
+  if (extra > 0) {
+    lines.push(`※ 100원 단위 올림으로 ${extra.toLocaleString("ko-KR")}원이 더 걷혀요.`);
+  }
+  return lines.join("\n"); // 한 줄씩 줄바꿈으로 이어 붙임
+}
+
+// 글자를 클립보드에 복사
+async function copyToClipboard(text) {
+  try {
+    // 요즘 브라우저의 기본 방법
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // 카카오톡 인앱 브라우저처럼 위 방법이 막힌 곳을 위한 예전 방법:
+    // 안 보이는 입력칸에 글을 넣고 '복사' 명령을 실행
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
+  }
+}
+
+// '복사' 버튼을 눌렀을 때
+async function copyResult() {
+  const result = calculate();
+
+  if (people.length === 0 || result.spent === 0) {
+    alert("복사할 결과가 없어요. 참석자와 금액을 먼저 입력해 주세요.");
+    return;
+  }
+  if (result.warnings.length > 0 &&
+      !confirm("계산에서 빠진 차수가 있어요. 그래도 복사할까요?")) {
+    return;
+  }
+
+  await copyToClipboard(buildCopyText(result));
+
+  // 버튼 글자를 잠깐 바꿔서 복사됐다고 알려줌
+  copyBtn.textContent = "✅ 복사됐어요! 단톡방에 붙여넣으세요";
+  setTimeout(() => {
+    copyBtn.textContent = "📋 단톡방용 복사";
+  }, 2000);
+}
+
+
+// ==============================
+// 8. 이벤트 연결: 사용자가 무언가 하면 함수 실행
 // ==============================
 
 // '추가' 버튼을 누르면 추가
@@ -455,8 +530,11 @@ nameInput.addEventListener("keydown", (event) => {
 // '차수 추가' 버튼
 addRoundBtn.addEventListener("click", addRound);
 
+// '단톡방용 복사' 버튼
+copyBtn.addEventListener("click", copyResult);
+
 
 // ==============================
-// 8. 처음 화면 그리기
+// 9. 처음 화면 그리기
 // ==============================
 render();
