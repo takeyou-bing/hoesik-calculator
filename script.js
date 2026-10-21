@@ -410,7 +410,7 @@ function renderResult() {
   const extra = result.collected - result.spent;
   extraMessage.textContent =
     extra > 0
-      ? `100원 단위 올림으로 총 ${extra.toLocaleString("ko-KR")}원이 더 걷혀요. ` +
+      ? `100원 단위 올림으로 총 ${extra.toLocaleString("ko-KR")}원이 더 걷혀요.\n` + // \n: 줄바꿈
         `(먼저 결제한 분이 ${extra.toLocaleString("ko-KR")}원 더 받게 됩니다)`
       : "";
 
