@@ -18,42 +18,12 @@
     <ul id="people-list"></ul>
   </section>
 
-  <!-- ② 차수 입력 (3단계부터 차수 카드를 자동으로 만들고, 지금은 1차 모양만 보여줌) -->
+  <!-- ② 차수 입력 -->
   <section id="rounds-section">
     <h2>② 차수</h2>
 
-    <div class="round">
-      <h3>1차</h3>
-
-      <label>
-        총 금액
-        <!-- inputmode="numeric": 휴대폰에서 숫자 키패드가 뜨게 함 -->
-        <input type="text" inputmode="numeric" placeholder="0"> 원
-      </label>
-
-      <p>참석</p>
-      <label><input type="checkbox" checked> 김팀장</label>
-      <label><input type="checkbox" checked> 이대리</label>
-
-      <p>정산 방식</p>
-      <label><input type="radio" name="method-1" checked> 1/N</label>
-      <label><input type="radio" name="method-1"> 특정인 부담 후 나머지 1/N</label>
-
-      <!-- '특정인 부담'을 골랐을 때만 보일 영역 -->
-      <div class="sponsor">
-        <label>
-          부담자
-          <select>
-            <option>김팀장</option>
-            <option>이대리</option>
-          </select>
-        </label>
-        <label>
-          부담액
-          <input type="text" inputmode="numeric" placeholder="0"> 원
-        </label>
-      </div>
-    </div>
+    <!-- 차수 카드(1차, 2차, 3차)가 여기에 표시됨 (script.js가 채움) -->
+    <div id="rounds-list"></div>
 
     <button id="add-round-btn" type="button">+ 차수 추가</button>
   </section>
