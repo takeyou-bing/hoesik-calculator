@@ -14,11 +14,8 @@
     <h2>① 참석자</h2>
     <input id="name-input" type="text" placeholder="이름 입력">
     <button id="add-person-btn" type="button">추가</button>
-    <!-- 추가된 이름이 여기에 표시됨 (2단계에서 동작) -->
-    <ul id="people-list">
-      <li>김팀장 <button type="button">×</button></li>
-      <li>이대리 <button type="button">×</button></li>
-    </ul>
+    <!-- 추가된 이름이 여기에 표시됨 (script.js가 채움) -->
+    <ul id="people-list"></ul>
   </section>
 
   <!-- ② 차수 입력 (3단계부터 차수 카드를 자동으로 만들고, 지금은 1차 모양만 보여줌) -->
@@ -73,5 +70,8 @@
     <p id="extra-message"></p>
     <button id="copy-btn" type="button">📋 단톡방용 복사</button>
   </section>
+
+  <!-- 동작을 담당하는 JavaScript 파일 연결 (화면을 다 그린 뒤 실행되도록 맨 아래에 둠) -->
+  <script src="script.js"></script>
 </body>
 </html>
