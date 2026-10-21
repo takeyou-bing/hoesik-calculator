@@ -28,6 +28,10 @@ const addPersonBtn = document.getElementById("add-person-btn");
 const peopleList = document.getElementById("people-list");
 const roundsList = document.getElementById("rounds-list");
 const addRoundBtn = document.getElementById("add-round-btn");
+const resultList = document.getElementById("result-list");
+const totalMessage = document.getElementById("total-message");
+const extraMessage = document.getElementById("extra-message");
+const warningList = document.getElementById("warning-list");
 
 
 // ==============================
@@ -121,7 +125,74 @@ function changeMethod(round, method) {
 
 
 // ==============================
-// 4. 도우미 함수
+// 4. 계산: 데이터만 보고 사람별 금액을 구함 (화면은 건드리지 않음)
+// ==============================
+
+// 100원 단위로 올림
+// (나눗셈 결과가 103333.3333처럼 소수가 되거나, 컴퓨터 계산 오차로
+//  100000.0000001처럼 나올 수 있어서 아주 작은 오차는 무시하고 올림)
+function roundUpTo100(number) {
+  if (number < 0.001) {
+    return 0; // 낼 돈이 없는 사람 ("-0원"으로 표시되는 것 방지)
+  }
+  return Math.ceil((number - 0.001) / 100) * 100;
+}
+
+// 정산 계산
+// 돌려주는 값:
+// {
+//   amounts: { "김팀장": 130000, ... },  사람별 낼 금액 (100원 올림 후)
+//   spent: 410000,                        실제로 쓴 총액
+//   collected: 410200,                    걷는 총액 (올림 후 합계)
+//   warnings: ["2차에 참석자가 없어요"]    계산에서 빠진 차수 안내
+// }
+function calculate() {
+  // 사람별 정확한 금액 (소수 포함), 처음엔 모두 0원
+  const exact = {};
+  for (const name of people) {
+    exact[name] = 0;
+  }
+
+  let spent = 0;
+  const warnings = [];
+
+  rounds.forEach((round, index) => {
+    const roundName = `${index + 1}차`;
+
+    if (round.amount === 0) {
+      return; // 금액을 아직 안 넣은 차수는 건너뜀
+    }
+    if (round.attendees.length === 0) {
+      warnings.push(`${roundName}에 참석자가 없어서 계산에서 뺐어요.`);
+      return;
+    }
+    if (round.method === "sponsor") {
+      warnings.push(`${roundName}의 '특정인 부담' 계산은 다음 단계에서 추가돼요.`);
+      return;
+    }
+
+    // 1/N: 총 금액을 참석 인원으로 나눠 각자에게 더함
+    const share = round.amount / round.attendees.length;
+    for (const name of round.attendees) {
+      exact[name] += share;
+    }
+    spent += round.amount;
+  });
+
+  // 사람별 최종 금액을 100원 단위로 올림
+  const amounts = {};
+  let collected = 0;
+  for (const name of people) {
+    amounts[name] = roundUpTo100(exact[name]);
+    collected += amounts[name];
+  }
+
+  return { amounts, spent, collected, warnings };
+}
+
+
+// ==============================
+// 5. 도우미 함수
 // ==============================
 
 // "320,000" 같은 글자 → 320000 숫자 (숫자 외의 글자는 무시)
@@ -166,13 +237,14 @@ function createLabel(text, control, suffix = "") {
 
 
 // ==============================
-// 5. 화면 그리기: 데이터를 화면에 반영
+// 6. 화면 그리기: 데이터를 화면에 반영
 // ==============================
 
 // 전체 화면 다시 그리기
 function render() {
   renderPeople();
   renderRounds();
+  renderResult();
 }
 
 // people 목록을 보고 참석자 목록 화면을 새로 그림
@@ -205,6 +277,39 @@ function renderRounds() {
   addRoundBtn.disabled = rounds.length >= MAX_ROUNDS;
 }
 
+// 계산 결과를 정산 결과 영역에 그림
+function renderResult() {
+  const result = calculate();
+
+  // 사람별 금액
+  resultList.innerHTML = "";
+  for (const name of people) {
+    const li = document.createElement("li");
+    li.textContent = `${name} ${result.amounts[name].toLocaleString("ko-KR")}원`;
+    resultList.appendChild(li);
+  }
+
+  // 총액
+  totalMessage.textContent =
+    result.spent > 0 ? `총 ${result.spent.toLocaleString("ko-KR")}원` : "";
+
+  // 100원 올림으로 더 걷히는 금액
+  const extra = result.collected - result.spent;
+  extraMessage.textContent =
+    extra > 0
+      ? `100원 단위 올림으로 총 ${extra.toLocaleString("ko-KR")}원이 더 걷혀요. ` +
+        `(먼저 결제한 분이 ${extra.toLocaleString("ko-KR")}원 더 받게 됩니다)`
+      : "";
+
+  // 계산에서 빠진 차수 안내
+  warningList.innerHTML = "";
+  for (const warning of result.warnings) {
+    const li = document.createElement("li");
+    li.textContent = "⚠️ " + warning;
+    warningList.appendChild(li);
+  }
+}
+
 // 차수 카드 하나 만들기
 function createRoundCard(round, index) {
   const card = document.createElement("div");
@@ -225,6 +330,7 @@ function createRoundCard(round, index) {
   // 총 금액
   const amountInput = createAmountInput(round.amount, (number) => {
     round.amount = number;
+    renderResult(); // 금액은 입력 중이라 결과만 다시 그림
   });
   card.appendChild(createLabel("총 금액", amountInput, "원"));
 
@@ -290,12 +396,14 @@ function createRoundCard(round, index) {
     select.value = round.sponsor;
     select.addEventListener("change", () => {
       round.sponsor = select.value;
+      renderResult();
     });
     sponsorBox.appendChild(createLabel("부담자", select));
 
     // 부담액
     const sponsorInput = createAmountInput(round.sponsorAmount, (number) => {
       round.sponsorAmount = number;
+      renderResult();
     });
     sponsorBox.appendChild(createLabel("부담액", sponsorInput, "원"));
 
@@ -307,7 +415,7 @@ function createRoundCard(round, index) {
 
 
 // ==============================
-// 6. 이벤트 연결: 사용자가 무언가 하면 함수 실행
+// 7. 이벤트 연결: 사용자가 무언가 하면 함수 실행
 // ==============================
 
 // '추가' 버튼을 누르면 추가
@@ -326,6 +434,6 @@ addRoundBtn.addEventListener("click", addRound);
 
 
 // ==============================
-// 7. 처음 화면 그리기
+// 8. 처음 화면 그리기
 // ==============================
 render();

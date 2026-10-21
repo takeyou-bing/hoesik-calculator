@@ -31,13 +31,13 @@
   <!-- ③ 정산 결과 -->
   <section id="result-section">
     <h2>③ 정산 결과</h2>
-    <!-- 사람별 금액이 여기에 표시됨 (4단계에서 동작) -->
-    <ul id="result-list">
-      <li>김팀장 0원</li>
-      <li>이대리 0원</li>
-    </ul>
-    <!-- 100원 올림으로 더 걷힌 금액 안내 -->
+    <!-- 사람별 금액이 여기에 표시됨 (script.js가 채움) -->
+    <ul id="result-list"></ul>
+    <!-- 총액, 그리고 100원 올림으로 더 걷힌 금액 안내 -->
+    <p id="total-message"></p>
     <p id="extra-message"></p>
+    <!-- 계산할 수 없는 차수가 있을 때 안내 -->
+    <ul id="warning-list"></ul>
     <button id="copy-btn" type="button">📋 단톡방용 복사</button>
   </section>
 
