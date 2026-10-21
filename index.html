@@ -56,6 +56,20 @@
       <!-- 계산할 수 없는 차수가 있을 때 안내 -->
       <ul id="warning-list"></ul>
       <button id="copy-btn" class="btn btn-primary" type="button">📋 단톡방용 복사</button>
+
+      <!-- 기록 저장: 회식 이름(선택) + 저장 버튼 -->
+      <div class="save-row">
+        <input id="title-input" type="text" placeholder="회식 이름 (선택)" maxlength="20">
+        <button id="save-btn" class="btn" type="button">💾 기록 저장</button>
+      </div>
+    </section>
+
+    <!-- 지난 정산 기록 (이 휴대폰 브라우저에만 저장됨) -->
+    <section class="card" id="history-section">
+      <h2>📒 지난 정산 기록</h2>
+      <p class="hint">이 기기의 이 브라우저에만 저장돼요.</p>
+      <!-- 저장한 기록이 여기에 표시됨 (script.js가 채움) -->
+      <ul id="history-list"></ul>
     </section>
   </main>
 

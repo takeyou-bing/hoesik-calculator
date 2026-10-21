@@ -18,6 +18,11 @@ let people = [];
 // }
 let rounds = [createRound()];
 
+// 기록을 저장할 때 쓰는 이름표 (브라우저 저장 공간 안의 칸 이름)
+const HISTORY_KEY = "hoesik-history";
+// 기록은 최대 20개까지 (넘으면 가장 오래된 것부터 지움)
+const MAX_HISTORY = 20;
+
 // 움직임 효과용 기억
 let newRoundIndex = -1;    // 방금 추가된 차수 번호 (그 카드만 나타나는 효과)
 let previousAmounts = {};  // 직전 결과 금액 (바뀐 금액만 반짝이는 효과)
@@ -39,6 +44,9 @@ const warningList = document.getElementById("warning-list");
 const copyBtn = document.getElementById("copy-btn");
 const toast = document.getElementById("toast");
 const receiptDate = document.getElementById("receipt-date");
+const titleInput = document.getElementById("title-input");
+const saveBtn = document.getElementById("save-btn");
+const historyList = document.getElementById("history-list");
 
 
 // ==============================
@@ -557,7 +565,8 @@ function createRoundCard(round, index) {
 // 단톡방용 글 만들기
 function buildCopyText(result) {
   const lines = [];
-  lines.push("[회식 정산]");
+  const title = titleInput.value.trim();
+  lines.push(title ? `[회식 정산] ${title}` : "[회식 정산]");
   lines.push(...result.summaries);
   lines.push("──────────");
   for (const name of people) {
@@ -592,16 +601,27 @@ async function copyToClipboard(text) {
   }
 }
 
-// '복사' 버튼을 눌렀을 때
-async function copyResult() {
+// 복사나 저장 전에 결과가 준비됐는지 점검
+// 준비됐으면 계산 결과를, 아니면 null을 돌려줌
+// action: "복사" 또는 "저장" (안내 문구에 사용)
+function getReadyResult(action) {
   const result = calculate();
 
   if (people.length === 0 || result.spent === 0) {
-    alert("복사할 결과가 없어요. 참석자와 금액을 먼저 입력해 주세요.");
-    return;
+    alert(`${action}할 결과가 없어요. 참석자와 금액을 먼저 입력해 주세요.`);
+    return null;
   }
   if (result.warnings.length > 0 &&
-      !confirm("계산에서 빠진 차수가 있어요. 그래도 복사할까요?")) {
+      !confirm(`계산에서 빠진 차수가 있어요. 그래도 ${action}할까요?`)) {
+    return null;
+  }
+  return result;
+}
+
+// '복사' 버튼을 눌렀을 때
+async function copyResult() {
+  const result = getReadyResult("복사");
+  if (!result) {
     return;
   }
 
@@ -621,7 +641,145 @@ function showToast(message) {
 
 
 // ==============================
-// 8. 이벤트 연결: 사용자가 무언가 하면 함수 실행
+// 8. 기록: 브라우저 저장 공간(localStorage)에 정산 기록을 남김
+// ==============================
+// 기록 하나는 이런 모양:
+// {
+//   id: 1792587737591,               구분용 번호 (저장한 시각)
+//   savedAt: "2026-10-21T11:30:00Z", 저장한 날짜와 시간
+//   title: "10월 팀 회식",            회식 이름 (없으면 "")
+//   spent: 410000,                    총액
+//   people: [...], rounds: [...]      불러올 때 쓰는 입력 내용 전체
+// }
+
+// 저장된 기록 목록 읽기
+// (사생활 보호 모드 등에서 저장 공간을 못 쓰거나, 내용이 깨졌으면 빈 목록)
+function loadHistory() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(HISTORY_KEY));
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+// 기록 목록 쓰기. 성공하면 true
+function storeHistory(history) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    return true;
+  } catch {
+    alert("이 브라우저에서는 기록을 저장할 수 없어요. (사생활 보호 모드인지 확인해 주세요)");
+    return false;
+  }
+}
+
+// '기록 저장' 버튼을 눌렀을 때
+function saveRecord() {
+  const result = getReadyResult("저장");
+  if (!result) {
+    return;
+  }
+
+  const record = {
+    id: Date.now(),
+    savedAt: new Date().toISOString(),
+    title: titleInput.value.trim(),
+    spent: result.spent,
+    // 지금 입력을 복사해서 저장 (structuredClone: 겉모양뿐 아니라 안쪽까지 통째로 복사)
+    people: structuredClone(people),
+    rounds: structuredClone(rounds),
+  };
+
+  // 새 기록을 맨 앞에 넣고, 20개가 넘으면 뒤(오래된 것)를 자름
+  const history = [record, ...loadHistory()].slice(0, MAX_HISTORY);
+  if (storeHistory(history)) {
+    renderHistory();
+    showToast("💾 기록을 저장했어요");
+  }
+}
+
+// 기록 불러오기: 그때 입력한 내용으로 화면을 되돌림
+function openRecord(record) {
+  const hasInput = people.length > 0 || rounds.some((r) => r.amount > 0);
+  if (hasInput && !confirm("지금 입력한 내용이 이 기록으로 바뀌어요. 불러올까요?")) {
+    return;
+  }
+
+  people = structuredClone(record.people);
+  rounds = structuredClone(record.rounds);
+  titleInput.value = record.title;
+  previousAmounts = {}; // 불러온 직후에는 반짝이는 효과 없이
+  render();
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  showToast("📂 기록을 불러왔어요");
+}
+
+// 기록 삭제
+function deleteRecord(record) {
+  const name = record.title || "이 기록";
+  if (!confirm(`'${name}'을(를) 삭제할까요?`)) {
+    return;
+  }
+  const history = loadHistory().filter((r) => r.id !== record.id);
+  if (storeHistory(history)) {
+    renderHistory();
+  }
+}
+
+// 기록 목록 화면 그리기
+function renderHistory() {
+  const history = loadHistory();
+  historyList.innerHTML = "";
+
+  if (history.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "history-empty";
+    empty.textContent = "아직 저장한 기록이 없어요.";
+    historyList.appendChild(empty);
+    return;
+  }
+
+  for (const record of history) {
+    const li = document.createElement("li");
+    li.className = "history-item";
+
+    // 왼쪽: 기록 내용 (누르면 불러오기)
+    const openBtn = document.createElement("button");
+    openBtn.type = "button";
+    openBtn.className = "history-open";
+    openBtn.addEventListener("click", () => openRecord(record));
+
+    const title = document.createElement("strong");
+    title.textContent = record.title || "회식 정산";
+
+    const date = new Date(record.savedAt).toLocaleString("ko-KR", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+    const info = document.createElement("span");
+    info.textContent =
+      `${date} · ${record.rounds.length}차 · ${record.people.length}명 · ` +
+      `총 ${record.spent.toLocaleString("ko-KR")}원`;
+
+    openBtn.append(title, info);
+
+    // 오른쪽: 삭제 버튼
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "text-btn";
+    deleteBtn.textContent = "삭제";
+    deleteBtn.addEventListener("click", () => deleteRecord(record));
+
+    li.append(openBtn, deleteBtn);
+    historyList.appendChild(li);
+  }
+}
+
+
+// ==============================
+// 9. 이벤트 연결: 사용자가 무언가 하면 함수 실행
 // ==============================
 
 // '추가' 버튼을 누르면 추가
@@ -641,12 +799,16 @@ addRoundBtn.addEventListener("click", addRound);
 // '단톡방용 복사' 버튼
 copyBtn.addEventListener("click", copyResult);
 
+// '기록 저장' 버튼
+saveBtn.addEventListener("click", saveRecord);
+
 
 // ==============================
-// 9. 처음 화면 그리기
+// 10. 처음 화면 그리기
 // ==============================
 
 // 영수증에 오늘 날짜 표시 (예: 2026. 10. 21.)
 receiptDate.textContent = new Date().toLocaleDateString("ko-KR");
 
 render();
+renderHistory();

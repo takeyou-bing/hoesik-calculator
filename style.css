@@ -612,3 +612,58 @@ button:active:not(:disabled) {
     transition: none !important;
   }
 }
+
+
+/* ==============================
+   10. 기록 저장과 지난 기록
+   ============================== */
+
+/* 회식 이름 입력칸 + 저장 버튼 한 줄 */
+.save-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#history-section {
+  margin-top: 8px;
+}
+#history-section h2 {
+  margin-bottom: 2px;
+}
+#history-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.history-empty {
+  padding: 12px 0 4px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-top: 1px solid var(--line);
+}
+/* 기록 내용 전체가 누르는 버튼 */
+.history-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.history-open span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
